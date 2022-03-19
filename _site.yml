@@ -1,0 +1,23 @@
+name: "Brett's Internet"
+header-includes: 
+  \usepackage{graphicx}
+  \usepackage{float}
+output_dir: "."
+navbar:
+  title: "Home"
+  right:
+    - text: "About"
+      menu:
+          - text: "Professional Documents"
+            href: resume.html
+      href: about.html
+    - icon: fa-envelope fa-lg
+      href: mailto:<weave333@umn.edu>
+    - icon: fa-github fa-lg
+      href: http://github.com/weave333/
+    - icon: fa-brands fa-linkedin
+      href: https://www.linkedin.com/
+    - icon: 
+output:  
+   html_document:
+    theme: flatly

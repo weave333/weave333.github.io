@@ -1,0 +1,20 @@
+---
+title: "Brett Weaver"
+---
+
+<div style= "float : left; position : relative; top: 0px; width : 450px; height : 360px; padding-right: 24px; margin-bottom : 0px">
+![Brett's Photo](./bweaver.jpg)
+
+</div>
+<font size = "6"> 
+**Bio**
+</font>
+
+<font size = "4"> 
+Brett Weaver has over 10 years of experience within the research field to include publications on infectious disease and microbiology, infection control quality assurance in a hospital setting, clinical research management and recruitment, research application training, and data analytics.
+</font>  
+  
+  
+
+>"Hello" - Brett Weaver
+
