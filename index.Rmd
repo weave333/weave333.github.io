@@ -3,7 +3,7 @@ title: "Brett Weaver"
 ---
 
 <div style= "float : left; position : relative; top: 0px; width : 450px; height : 360px; padding-right: 24px; margin-bottom : 0px">
-![Brett's Photo](./bweaver.jpg)
+![Brett's Photo](./docs/bweaver.jpg)
 
 </div>
 <font size = "6"> 
