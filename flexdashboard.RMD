@@ -1,0 +1,290 @@
+---
+title: "Flexdashboards"
+author: "Brett Weaver"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include = FALSE, echo = FALSE}
+library(tidyverse)
+library(lubridate)
+library(gt)
+library(paletteer)
+library(plotly)
+library(KMsurv)
+library(flexdashboard)
+
+#Working directory for .RMD
+knitr::opts_knit$set(echo = TRUE,
+                     root.dir = rprojroot::find_rstudio_root_file())
+
+#Controlling figure output in markdown
+knitr::opts_chunk$set(
+#  fig.height =   
+  fig.width = 6,
+#  fig.asp = .5,
+  out.width = "90%",
+#  out.height = 
+ fig.align  = "center",
+  cache = FALSE,
+  eval  = TRUE,
+  echo  = TRUE,
+  warning = FALSE
+)
+
+#My Colours (from viridis)
+my_purple <- "#440154FF"
+my_yellow <- "#FDE725FF"
+
+#Set Theme for ggplot2
+theme_set(theme_bw() + theme(plot.title = element_text(hjust = 0.5), legend.position = "bottom"))
+
+#Set Scientific notation output and decimal places for knitr
+options(scipen = 999)
+options(digits = 4)
+options(dplyr.summarise.inform = FALSE)
+```
+
+
+```{r data_read, include = FALSE, echo = FALSE}
+
+############
+## PLOT 1 ##
+############
+
+#Read default lubridate Lakers data set
+data(lakers)
+
+#Convert to date/times appropriately
+lakers.df <- lakers %>%
+  mutate(
+    date    = ymd(date),
+    time    = ms(time),
+    etype   = as.factor(etype),
+    type    = case_when(
+      type %in% "3pt"           ~ "3 Pointer",
+      str_detect(type, "layup") ~ "Layup",
+      str_detect(type, "dunk")  ~ "Dunk",
+      str_detect(type, "jump")  ~ "Jumpshot",
+      TRUE                      ~ "Other"
+    ),
+    month   = month(date, label = TRUE, abbr = TRUE),
+    dow     = wday(date, #day of the week
+                   label = TRUE, #return name i.e "Friday"
+                   abbr  = FALSE, #Return full name
+                   week_start = getOption("lubridate.week.start", 1)), #1 = Monday
+    quarter = period
+  ) %>%
+  dplyr::select(-period)
+
+#Remove lakers for clarity
+remove(lakers)
+
+
+############
+## PLOT 2 ##
+############
+
+disney.df <- read_csv("./data/disneyland_reviews.csv",
+                      na = c("missing"),
+                      show_col_types = FALSE) %>%
+  janitor::clean_names() %>%
+  rename(
+    id       = review_id,
+    text     = review_text, #trimming unnecessary review_
+    location = reviewer_location
+  ) %>% 
+  mutate( #Time
+    id    = as.factor(id),
+    date  = lubridate::ym(year_month), #Cleaning up time as date, y/m factors
+    year  = lubridate::year(date) %>% #See the lubridate package
+      as.factor(),
+    month = month.name[lubridate::month(date)] %>%
+      as.factor()
+  ) %>%
+  mutate( #Text analysis
+    n_words    = str_split(text, " ") %>% #proxy for number of words
+      map_dbl(length),
+    avg_length = str_split(text, " ") %>% #proxy for average length
+      map(str_length) %>% 
+      map_dbl(mean),
+    n_unique   = str_split(text, " ") %>% #proxy for no. unique words
+      map(unique) %>%
+      map_dbl(length),
+    branch     = str_split(branch, "_") %>% #extracting branch w stringr
+      map_chr(2) %>%
+      as.factor() %>%
+      fct_recode("Hong Kong" = "HongKong") %>%
+      fct_relevel("California", "Paris")
+  ) %>%
+  dplyr::select(id, rating, location, branch, everything(), -c(year_month, text))
+
+############
+## PLOT 3 ##
+############
+
+#Read default bmt data set
+data(bmt)
+
+#Clean and tidy up
+bmt.df <- as_tibble(bmt) %>% #make sure it's a tibble not a df
+  janitor::clean_names() %>% #clean names
+  mutate(
+    id = 1:nrow(.) %>% as.factor(),
+    group = case_when(
+      group %in% 1 ~ "ALL",
+      group %in% 2 ~ "AML_low_risk", #nested ifelse()
+      TRUE ~ "AML_high_risk"
+    ) %>%
+      as.factor() %>%
+      fct_relevel("AML_low_risk", "ALL") #forcats relevel
+  ) %>%
+  dplyr::select(id, group, contains(c("t", "d"))) %>%
+  dplyr::select(id, group, starts_with("t"), starts_with("d"))
+
+bmt_tidy.df <- bmt.df %>%
+  pivot_longer(cols = starts_with("t"), #taking time from wide to long
+               names_to = "event_type", #category = type of event
+               values_to = "event_time") %>% #measurement = time till event
+  mutate(
+    event_type = stringr::str_remove(event_type, "t") %>%
+      str_to_upper() %>% #clean up, remove t, make factor
+      as.factor()
+  ) %>%
+  pivot_longer(cols = starts_with("d"), # same for d = censoring
+               names_to = "censor_type",
+               values_to = "censor_lgl") %>%
+  mutate(
+    censor_type = stringr::str_remove(censor_type, "d") %>%
+      str_to_upper() %>% #clean up censor
+      as.factor(),
+    censor_lgl = ifelse(censor_lgl %in% 1, TRUE, FALSE) #transform to logical
+  )
+
+```
+
+Column {data-width=650}
+-----------------------------------------------------------------------
+
+### Chart A
+
+```{r plot 1 - lakers, echo = FALSE}
+flex_plot1 <- lakers.df %>%
+  filter(etype %in% "shot", quarter %in% 1:4) %>%
+  group_by(date, quarter, type) %>%
+  summarise(
+    sht_pct = mean((result %in% "made"))
+  ) %>%
+  ungroup() %>%
+  mutate(
+    type    = str_to_title(type) %>%
+      as.factor() %>%
+      fct_reorder(sht_pct, .desc = TRUE),
+    quarter = str_c("Quarter ", quarter) %>%
+      as_factor()
+  ) 
+
+
+flex_plot1 %>%
+  mutate(
+    type = fct_reorder(type, sht_pct, .desc = TRUE)
+  ) %>% 
+  plot_ly(
+    x     = ~sht_pct,
+    type  = "box", 
+    color = ~type,
+    alpha = 0.4
+  ) %>%
+  layout(
+    title  = "Shooting Percentage by Type (Lakers 08-09)",
+    xaxis  = list(title = "Shot Percentage"),
+    yaxis  = list(title = "Type of Shot")
+  )
+```
+
+Column {data-width=350}
+-----------------------------------------------------------------------
+
+### Chart B
+
+```{r plot 2 - disney, echo = FALSE}
+flex_plot2 <- disney.df %>%
+  pivot_longer(
+    cols      = contains(c("n_", "avg")),
+    names_to  = "text_var",
+    values_to = "measurement"
+  ) %>%
+  mutate(
+    text_var = case_when(
+      text_var %in% "n_words"  ~ "Word Count",
+      text_var %in% "n_unique" ~ "Unique Word Count",
+      TRUE                     ~ "Avg. Word Length"
+    ) %>%
+      as_factor()
+  ) %>%
+  ggplot(aes(x = measurement, y = rating, colour = text_var)) +
+  geom_point(alpha    = 0.16, 
+             position = position_jitter(w = 2, h = 0.36),
+             size     = 2, 
+             shape     = 16) +
+  labs(
+    x = "Observed Measurement",
+    y = "Rating",
+    title = "Text-derived Associations with Rating"
+  ) +
+  scale_colour_viridis_d("Text-derived Variable") +
+  facet_wrap(~ text_var, scales = "free_x") 
+
+ggplotly(flex_plot2)
+```
+
+### Chart C
+
+```{r plot 3 - bmt, echo = FALSE}
+
+#group by risk_group and event type, grab the mean and median time till event
+bmt_med.df <- bmt_tidy.df %>%
+  group_by(group) %>%
+  summarise(median_time = median(event_time))
+
+# bmt_sum.df <- bmt_tidy.df %>%
+#   group_by(group, event_type) %>%
+#   summarise(
+#     median_time = median(event_time),
+#     mean_time = mean(event_time)
+#   ) 
+
+#Prep the data for the flexdashboard
+flex.bmt.gg <- bmt_tidy.df %>%
+  ggplot(aes(x = event_time, colour = group, fill = group)) +
+  geom_histogram(aes(y = stat(density)),
+                 binwidth = 100, colour = "black",
+                 alpha = 0.24, position = "stack") +
+  geom_density(adjust = 2, alpha = 0.44, position = "stack") +
+  labs(
+    x = "Time-till-event (days)",
+    y = "Density",
+    title = "Distribution of Event Times by Type and Group"
+  ) +
+  scale_colour_viridis_d("Risk Group") +
+  scale_fill_viridis_d("Risk Group")
+
+
+#Add median lines and text
+event_time.gg <- flex.bmt.gg +
+  geom_vline(data = bmt_med.df,
+             aes(xintercept = median_time, colour = group),
+             alpha = 0.64, size = 1.5, linetype = 2) +
+  annotate(geom = "text", x = 524, y = 0.0065,
+           label = "Median", hjust = "left")
+
+#2.2 Event time ggplot by group and type
+event_type.gg <- flex.bmt.gg + facet_wrap(~event_type, scales = "free")
+
+ggplotly(event_type.gg)
+
+
+```
+

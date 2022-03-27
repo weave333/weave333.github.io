@@ -10,6 +10,10 @@ navbar:
       menu:
           - text: "Professional Documents"
             href: resume.html
+    - text: "Recent Work"
+      menu:
+          - text: "Flexdashboard"
+            href: flexdashboard.html
       href: about.html
     - icon: fa-envelope fa-lg
       href: mailto:<weave333@umn.edu>
@@ -20,4 +24,4 @@ navbar:
     - icon: 
 output:  
    html_document:
-    theme: flatly
+    theme: cosmo
