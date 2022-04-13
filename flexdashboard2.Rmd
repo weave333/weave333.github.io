@@ -58,7 +58,7 @@ options(dplyr.summarise.inform = FALSE)
 
 ### Chart 1: Location and Information of Shops in Minnesota
 
-```{r plot 1 - shops, echo = FALSE, fig.height = 4, fig.width = 4}
+```{r plot 1 - shops, echo = FALSE, fig.height = 6, fig.width = 2}
 
 #Grabbing Minnesota shops
 osm_shop_sf.df <- opq(bbox = "minnesota") %>%
@@ -199,10 +199,10 @@ mn_pop.ggmap <- hennepin_base.gg +
   scale_fill_viridis_c("Population", labels = scales::number) +
   theme_map() +
   theme(
-    plot.title   = element_text(size  = 16,
+    plot.title   = element_text(size  = 6,
                                 hjust = 0.5),
-    legend.text  = element_text(size = 16),
-    legend.title = element_text(size = 16),
+    legend.text  = element_text(size = 6),
+    legend.title = element_text(size = 6),
     legend.position = "right"
   )
 
@@ -217,7 +217,7 @@ ggplotly(mn_pop.ggmap,
 
 ### Chart 3: Percentage of Sex by County in MN 
 
-```{r plot 3 - sex, echo = FALSE, fig.height = 6, fig.width = 5}
+```{r plot 3 - sex, echo = FALSE, fig.height = 4, fig.width = 2}
 mn.df <- st_read("./data/USA_Counties/USA_Counties.shp", quiet = TRUE) %>%
   janitor::clean_names() %>%
   filter(state_name %in% "Minnesota")
@@ -267,10 +267,10 @@ mn_sex.gg <- mn.df %>%
   scale_fill_viridis_c("Percent Sex", labels = scales::percent) +
   theme_map() +
   theme(
-    plot.title   = element_text(size  = 24,
+    plot.title   = element_text(size  = 6,
                                 hjust = 0.5),
-    legend.text  = element_text(size = 20),
-    legend.title = element_text(size = 20),
+    legend.text  = element_text(size = 6),
+    legend.title = element_text(size = 6),
     legend.position = "right"
   ) +
   facet_wrap(~ sex, scales = "fixed")
